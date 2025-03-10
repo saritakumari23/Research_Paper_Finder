@@ -1,47 +1,49 @@
 import requests
 import pandas as pd
-import typer
-import rich
-from rich.console import Console
+from flask import Flask, render_template, jsonify, request
 
-console = Console()
+app = Flask(__name__)
 
+# PubMed API URLs
 PUBMED_API_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi"
 DETAILS_API_URL = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi"
 
-def fetch_papers(query: str, filename: str = None, debug: bool = False):
-    """
-    Fetches research papers from PubMed based on a user query.
-    Extracts relevant fields and saves them as a CSV file.
-    """
-    console.print(f"🔍 Searching for papers with query: [bold cyan]{query}[/bold cyan]")
+@app.route("/")
+def home():
+    return render_template("index.html")
 
+@app.route("/fetch_papers", methods=["GET"])
+def fetch_papers():
+    query = request.args.get("query")
+    
+    if not query:
+        return jsonify({"error": "Missing 'query' parameter"}), 400
+
+    # Step 1: Search for papers on PubMed
     params = {
         "db": "pubmed",
         "term": query,
         "retmode": "json",
-        "retmax": 10  # Adjust as needed
+        "retmax": 10  # Limit results to 10
     }
 
     response = requests.get(PUBMED_API_URL, params=params)
-
     if response.status_code != 200:
-        console.print(f"[bold red]❌ Error: Failed to fetch papers. Status Code: {response.status_code}[/bold red]")
-        return
+        return jsonify({"error": "Failed to fetch papers"}), 500
     
     data = response.json()
     paper_ids = data.get("esearchresult", {}).get("idlist", [])
 
     if not paper_ids:
-        console.print("[yellow]⚠ No papers found for this query.[/yellow]")
-        return
-    
-    # Fetch detailed information
+        return jsonify({"message": "No papers found", "query": query})
+
+    # Step 2: Fetch details for the retrieved paper IDs
     details_params = {
         "db": "pubmed",
         "id": ",".join(paper_ids),
         "retmode": "json"
     }
+
     details_response = requests.get(DETAILS_API_URL, params=details_params)
     details_data = details_response.json()
 
@@ -52,17 +54,10 @@ def fetch_papers(query: str, filename: str = None, debug: bool = False):
             "PubmedID": paper_id,
             "Title": paper_info.get("title", "N/A"),
             "Publication Date": paper_info.get("pubdate", "N/A"),
-            "Company Affiliation(s)": "N/A",  # Needs extra logic to filter affiliations
-            "Corresponding Author Email": "N/A"  # Needs extra API or parsing
+            "Link": f"https://pubmed.ncbi.nlm.nih.gov/{paper_id}/"
         })
 
-    df = pd.DataFrame(papers)
-
-    if filename:
-        df.to_csv(filename, index=False)
-        console.print(f"[green]✅ Results saved to {filename}[/green]")
-    else:
-        console.print(df.to_string())
+    return jsonify({"query": query, "papers": papers})
 
 if __name__ == "__main__":
-    typer.run(fetch_papers)
+    app.run(debug=True)
