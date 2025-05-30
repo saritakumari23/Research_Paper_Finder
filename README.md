@@ -6,7 +6,13 @@ live project: https://research-paper-finder-32xg.onrender.com/
 
 📂 Project Structure
 
-📂 Task/ ├── 📜 fetch_papers.py # Script to fetch research papers ├── 📜 main.py # Main entry point ├── 📜 pyproject.toml # Poetry configuration ├── 📜 poetry.lock # Lock file for dependencies ├── 📂 pubmed/ # Directory for fetched papers └── 📜 README.md # Project documentation ⚙️ Installation
+📂 Task/ ├── 📜 fetch_papers.py 
+         ├── 📜 main.py 
+         ├── 📜 pyproject.toml 
+         ├── 📜 poetry.lock  
+         ├── 📂 pubmed/ 
+              └── 📜 README.md 
+                  ⚙️ Installation
 
 1️⃣ Clone the Repository
 
